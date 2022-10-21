@@ -28,8 +28,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "my_states.h"
-#include "states.h"
+#include "../include/my_states.h"
+#include "../lib/states.h"
 
 void increment_state_data(int inc) {
   my_states_data *state_count = (my_states_data *)states_get_data();

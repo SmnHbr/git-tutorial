@@ -31,9 +31,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "main.h"
-#include "my_states.h"
-#include "states.h"
+#include "../include/main.h"
+#include "../include/my_states.h"
+#include "../lib/states.h"
 
 const char *argp_program_version = "1.0";
 const char *argp_program_bug_address = "alex.hoffman@tum.de";
@@ -55,7 +55,7 @@ typedef struct {
   int args[1];
   int verbose;
   int tick;
-} arguments_t:
+} arguments_t;
 
 void errno_abort(char *message) {
   perror(message);
@@ -94,19 +94,19 @@ void timer_callback(union sigval arg) {
 
   error = pthread_mutex_lock(&mutex);
   if (error != 0)
-    err_abort(error, "Callback locking");
+    errno_abort("Callback locking"); //!
 
   states_run();
 
   if (count >= count_to) {
     error = pthread_cond_signal(&cond); /** Signal condition fulfilled */
     if (error != 0)
-      err_abort(error, "Signal condition");
+      errno_abort("Signal condition");
   }
 
   error = pthread_mutex_unlock(&mutex);
   if (error != 0)
-    err_abort(error, "Callback unlocking");
+    errno_abort("Callback unlocking");
 }
 
 void create_timer(int tick) {
@@ -141,7 +141,7 @@ void create_timer(int tick) {
 }
 
 void statemachine_callback(void) {
-  my_states_data **cur_data = states_get_data();
+  my_states_data *cur_data = (my_states_data*) states_get_data(); //typ con hinzu S.H
 
   int diff = cur_data->cur_val - cur_data->prev_val;
 
@@ -173,12 +173,12 @@ int main(int argc, char **argv) {
          arguments.verbose ? "yes" : "no", arguments.tick);
 
   /** Initialize state machine */
-  states_add(state_probe, state_two_enter, state_two_run, state_two_ext,
+  states_add(state_probe, NULL, state_one_run, NULL, state_first_e,
+             FIRST_STATE_NAME);
+  states_add(state_probe, state_two_enter, state_two_run, state_two_exit,
              state_second_e, SECOND_STATE_NAME);
   states_add(state_probe, NULL, state_three_run, NULL, state_third_e,
              THIRD_STATE_NAME);
-  states_add(state_probe, NULL, state_one_run, NULL, state_first_e,
-             FIRST_STATE_NAME);
 
   states_set_callback(statemachine_callback);
 
@@ -190,28 +190,28 @@ int main(int argc, char **argv) {
   create_timer(arguments.tick);
 
   error = pthread_mutex_lock(&mutex);
-  if (error = 0)
-    err_abort(error, "Lock mutex");
+  if (error != 0)                             //shtest
+    errno_abort("Lock mutex");
 
   while (count < count_to) {
     /** Blocked thread can be awakened by a call to pthread_cond_signal */
     error =
         pthread_cond_wait(&cond, &mutex); /** Release mutex and block on cond */
     if (error != 0)
-      err_abort(error, "Wait on condition");
+      errno_abort("Wait on condition");
   }
 
   error = pthread_mutex_unlock(&mutex);
   if (error != 0)
-    err_abort(error, "Unlock mutex");
+    errno_abort("Unlock mutex");
 
   printf("Finshed\n");
 
-  return;
+  return 0;
 }
 
 void err_abort(int status, char *message) {
   fprintf(stderr, "%s\n", message);
   exit(status);
-  return 0;
+  return;
 }
